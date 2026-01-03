@@ -222,7 +222,7 @@ async function callGeminiAPI(prompt, imageBase64, mimeType) {
         }],
         generationConfig: {
             // Este campo é essencial no Gemini 2.5/3 para saída de imagem
-            responseModalities: ["IMAGE"] 
+            response_modalities: ["IMAGE"] 
         }
     };
 
