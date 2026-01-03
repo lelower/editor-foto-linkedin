@@ -205,27 +205,28 @@
     }
 
 async function callGeminiAPI(prompt, imageBase64, mimeType) {
-    const url = "/api/processar"; 
-    
     const payload = {
         contents: [{
             parts: [
                 { text: prompt },
                 { inlineData: { mimeType: mimeType, data: imageBase64 } }
             ]
-        }]
-        // REMOVEMOS o generationConfig que causava o erro
+        }],
+        // Gemini 2.0 responde com imagem
+        generationConfig: {
+            response_modalities: ["IMAGE"] 
+        }
     };
 
-    const response = await fetch(url, {
+    const response = await fetch('/api/processar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Erro no servidor: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || "Erro na geração");
     }
 
     return await response.json();
