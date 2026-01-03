@@ -122,205 +122,169 @@
             Powered by Gemini 2.5 Flash
         </div>
     </div>
+<script>
+    let currentBase64 = null;
+    let currentMimeType = null;
 
-    <script>
-        
-        let currentBase64 = null;
-        let currentMimeType = null;
+    // DOM Elements
+    const fileInput = document.getElementById('imageInput');
+    const uploadSection = document.getElementById('uploadSection');
+    const editorArea = document.getElementById('editorArea');
+    const controlsSection = document.getElementById('controlsSection');
+    const previewImage = document.getElementById('previewImage');
+    const resultImage = document.getElementById('resultImage');
+    const resultPlaceholder = document.getElementById('resultPlaceholder');
+    const loadingState = document.getElementById('loadingState');
+    const resultActions = document.getElementById('resultActions');
+    const generateBtn = document.getElementById('generateBtn');
+    const errorMessage = document.getElementById('errorMessage');
+    const errorText = document.getElementById('errorText');
 
-        // DOM Elements
-    async function processImage() {
-        showLoading(true);
-        
-        try {
-            const response = await fetch('/api/processar', { // CHAMA O SEU BACKEND
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requests: [{
-                        image: { content: currentBase64 },
-                        features: [{ type: 'OBJECT_LOCALIZATION' }] // Ou o que sua API usa
-                    }]
-                })
-            });
+    // Event Listeners
+    fileInput.addEventListener('change', handleFileSelect);
 
-                const data = await response.json();
-            // ... lógica para mostrar o resultado
-            } catch (error) {
-                showError("Erro ao processar imagem.");
-            } finally {
-                showLoading(false);
-            }
+    function handleFileSelect(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) {
+            showError("A imagem é demasiado grande. Por favor escolha uma imagem com menos de 5MB.");
+            return;
         }
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                currentBase64 = event.target.result.split(',')[1];
-                currentMimeType = file.type;
-                previewImage.src = event.target.result;
-                
-                // Switch UI State
-                uploadSection.classList.add('hidden');
-                editorArea.classList.remove('hidden');
-                controlsSection.classList.remove('hidden');
-                hideError();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        async function generateProfessionalPhoto() {
-            if (!currentBase64) return;
-
-            setLoading(true);
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            // Salva apenas o conteúdo base64 sem o prefixo data:image/...
+            currentBase64 = event.target.result.split(',')[1];
+            currentMimeType = file.type;
+            previewImage.src = event.target.result;
+            
+            uploadSection.classList.add('hidden');
+            editorArea.classList.remove('hidden');
+            controlsSection.classList.remove('hidden');
             hideError();
-
-            const prompt = "Improve this photo for a professional LinkedIn profile headshot. Enhance lighting to be soft and flattering studio lighting. Ensure the background is a blurred, neutral professional office or gradient. Make the subject look approachable and confident. Keep the person's identity but polish the image quality to be high resolution and sharp.";
-
-            try {
-                const result = await callGeminiAPI(prompt, currentBase64, currentMimeType);
-                
-                // Extract image from response
-                // Using gemini-2.5-flash-image-preview structure
-                const candidates = result.candidates;
-                if (candidates && candidates.length > 0) {
-                    const parts = candidates[0].content.parts;
-                    const imagePart = parts.find(p => p.inlineData);
-                    
-                    if (imagePart && imagePart.inlineData) {
-                        const newImageBase64 = imagePart.inlineData.data;
-                        const mimeType = imagePart.inlineData.mimeType || 'image/png';
-                        
-                        resultImage.src = `data:${mimeType};base64,${newImageBase64}`;
-                        showResult();
-                    } else {
-                        throw new Error("A IA não gerou uma imagem. Tente novamente.");
-                    }
-                } else {
-                    throw new Error("Resposta inválida da IA.");
-                }
-
-            } catch (error) {
-                console.error("Erro:", error);
-                showError(error.message || "Falha ao gerar a imagem. Por favor tente novamente.");
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        async function callGeminiAPI(prompt, imageBase64, mimeType) {
-    // Agora apontamos para o seu backend interno, não para o Google
-    const url = "/api/processar"; 
-    
-    const payload = {
-        contents: [{
-            parts: [
-                { text: prompt },
-                { inlineData: { mimeType: mimeType, data: imageBase64 } }
-            ]
-        }],
-        generationConfig: {
-            responseModalities: ["TEXT", "IMAGE"]
-        }
-    };
-
-    // Chamamos o fetch normal (sem a chave no link)
-    const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `Erro no servidor: ${response.status}`);
+        };
+        reader.readAsDataURL(file);
     }
 
-    return await response.json();
-}
+    async function generateProfessionalPhoto() {
+        if (!currentBase64) return;
 
-            return await fetchWithBackoff(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-        }
+        setLoading(true);
+        hideError();
 
-        async function fetchWithBackoff(url, options, retries = 3) {
-            const delays = [1000, 2000, 4000];
+        const prompt = "Improve this photo for a professional LinkedIn profile headshot. Enhance lighting to be soft and flattering studio lighting. Ensure the background is a blurred, neutral professional office or gradient. Make the subject look approachable and confident. Keep the person's identity but polish the image quality to be high resolution and sharp.";
+
+        try {
+            const result = await callGeminiAPI(prompt, currentBase64, currentMimeType);
             
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
+            const candidates = result.candidates;
+            if (candidates && candidates.length > 0) {
+                const parts = candidates[0].content.parts;
+                const imagePart = parts.find(p => p.inlineData);
+                
+                if (imagePart && imagePart.inlineData) {
+                    const newImageBase64 = imagePart.inlineData.data;
+                    const mimeType = imagePart.inlineData.mimeType || 'image/png';
                     
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error?.message || `Erro HTTP: ${response.status}`);
-                    }
-                    
-                    return await response.json();
-                } catch (error) {
-                    if (i === retries - 1) throw error;
-                    await new Promise(resolve => setTimeout(resolve, delays[i]));
+                    resultImage.src = `data:${mimeType};base64,${newImageBase64}`;
+                    showResult();
+                } else {
+                    throw new Error("A IA não gerou uma imagem. Tente novamente.");
                 }
-            }
-        }
-
-        // UI Helper Functions
-        function setLoading(isLoading) {
-            if (isLoading) {
-                generateBtn.disabled = true;
-                generateBtn.innerHTML = '<span class="loading-spinner !w-5 !h-5 !border-2 mr-2"></span> Processando...';
-                resultPlaceholder.classList.add('hidden');
-                resultImage.classList.add('hidden');
-                resultActions.classList.add('hidden');
-                loadingState.classList.remove('hidden');
             } else {
-                generateBtn.disabled = false;
-                generateBtn.innerHTML = '<span class="mr-2">Melhorar Foto</span><i class="fas fa-arrow-right"></i>';
-                loadingState.classList.add('hidden');
+                throw new Error("Resposta inválida da IA.");
             }
+
+        } catch (error) {
+            console.error("Erro:", error);
+            showError(error.message || "Falha ao gerar a imagem. Por favor tente novamente.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function callGeminiAPI(prompt, imageBase64, mimeType) {
+        // Envia para o seu backend na Vercel
+        const response = await fetch('/api/processar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        { text: prompt },
+                        { inlineData: { mimeType: mimeType, data: imageBase64 } }
+                    ]
+                }],
+                generationConfig: {
+                    responseModalities: ["TEXT", "IMAGE"]
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || `Erro no servidor: ${response.status}`);
         }
 
-        function showResult() {
-            loadingState.classList.add('hidden');
+        return await response.json();
+    }
+
+    // UI Helper Functions
+    function setLoading(isLoading) {
+        if (isLoading) {
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="loading-spinner !w-5 !h-5 !border-2 mr-2"></span> Processando...';
             resultPlaceholder.classList.add('hidden');
-            resultImage.classList.remove('hidden');
-            resultActions.classList.remove('hidden');
-        }
-
-        function showError(msg) {
-            errorText.textContent = msg;
-            errorMessage.classList.remove('hidden');
-        }
-
-        function hideError() {
-            errorMessage.classList.add('hidden');
-        }
-
-        function resetApp() {
-            fileInput.value = '';
-            currentBase64 = null;
-            currentMimeType = null;
-            previewImage.src = '';
-            resultImage.src = '';
-            
-            uploadSection.classList.remove('hidden');
-            editorArea.classList.add('hidden');
-            controlsSection.classList.add('hidden');
-            resultPlaceholder.classList.remove('hidden');
             resultImage.classList.add('hidden');
             resultActions.classList.add('hidden');
-            hideError();
+            loadingState.classList.remove('hidden');
+        } else {
+            generateBtn.disabled = false;
+            generateBtn.innerHTML = '<span class="mr-2">Melhorar Foto</span><i class="fas fa-arrow-right"></i>';
+            loadingState.classList.add('hidden');
         }
+    }
 
-        function downloadImage() {
-            const link = document.createElement('a');
-            link.download = 'foto-linkedin-profissional.png';
-            link.href = resultImage.src;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    </script>
+    function showResult() {
+        loadingState.classList.add('hidden');
+        resultPlaceholder.classList.add('hidden');
+        resultImage.classList.remove('hidden');
+        resultActions.classList.remove('hidden');
+    }
+
+    function showError(msg) {
+        errorText.textContent = msg;
+        errorMessage.classList.remove('hidden');
+    }
+
+    function hideError() {
+        errorMessage.classList.add('hidden');
+    }
+
+    function resetApp() {
+        fileInput.value = '';
+        currentBase64 = null;
+        currentMimeType = null;
+        previewImage.src = '';
+        resultImage.src = '';
+        uploadSection.classList.remove('hidden');
+        editorArea.classList.add('hidden');
+        controlsSection.classList.add('hidden');
+        resultPlaceholder.classList.remove('hidden');
+        resultImage.classList.add('hidden');
+        resultActions.classList.add('hidden');
+        hideError();
+    }
+
+    function downloadImage() {
+        const link = document.createElement('a');
+        link.download = 'foto-linkedin-profissional.png';
+        link.href = resultImage.src;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 </body>
 </html>
