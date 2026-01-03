@@ -208,19 +208,35 @@
         }
 
         async function callGeminiAPI(prompt, imageBase64, mimeType) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
-            
-            const payload = {
-                contents: [{
-                    parts: [
-                        { text: prompt },
-                        { inlineData: { mimeType: mimeType, data: imageBase64 } }
-                    ]
-                }],
-                generationConfig: {
-                    responseModalities: ["TEXT", "IMAGE"]
-                }
-            };
+    // Agora apontamos para o seu backend interno, não para o Google
+    const url = "/api/processar"; 
+    
+    const payload = {
+        contents: [{
+            parts: [
+                { text: prompt },
+                { inlineData: { mimeType: mimeType, data: imageBase64 } }
+            ]
+        }],
+        generationConfig: {
+            responseModalities: ["TEXT", "IMAGE"]
+        }
+    };
+
+    // Chamamos o fetch normal (sem a chave no link)
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `Erro no servidor: ${response.status}`);
+    }
+
+    return await response.json();
+}
 
             return await fetchWithBackoff(url, {
                 method: 'POST',
