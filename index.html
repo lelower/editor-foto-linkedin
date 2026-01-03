@@ -124,35 +124,34 @@
     </div>
 
     <script>
-        const apiKey = "AIzaSyDlBOrb_tXVlLeSdoYaE37Lnfw0Gs2tABA"; // Provided by environment
+        
         let currentBase64 = null;
         let currentMimeType = null;
 
         // DOM Elements
-        const fileInput = document.getElementById('imageInput');
-        const uploadSection = document.getElementById('uploadSection');
-        const editorArea = document.getElementById('editorArea');
-        const controlsSection = document.getElementById('controlsSection');
-        const previewImage = document.getElementById('previewImage');
-        const resultImage = document.getElementById('resultImage');
-        const resultPlaceholder = document.getElementById('resultPlaceholder');
-        const loadingState = document.getElementById('loadingState');
-        const resultActions = document.getElementById('resultActions');
-        const generateBtn = document.getElementById('generateBtn');
-        const errorMessage = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
+    async function processImage() {
+        showLoading(true);
+        
+        try {
+            const response = await fetch('/api/processar', { // CHAMA O SEU BACKEND
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requests: [{
+                        image: { content: currentBase64 },
+                        features: [{ type: 'OBJECT_LOCALIZATION' }] // Ou o que sua API usa
+                    }]
+                })
+            });
 
-        // Event Listeners
-        fileInput.addEventListener('change', handleFileSelect);
-
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            if (file.size > 5 * 1024 * 1024) {
-                showError("A imagem é demasiado grande. Por favor escolha uma imagem com menos de 5MB.");
-                return;
+                const data = await response.json();
+            // ... lógica para mostrar o resultado
+            } catch (error) {
+                showError("Erro ao processar imagem.");
+            } finally {
+                showLoading(false);
             }
+        }
 
             const reader = new FileReader();
             reader.onload = function(event) {
