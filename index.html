@@ -221,7 +221,7 @@ async function callGeminiAPI(prompt, imageBase64, mimeType) {
             ]
         }],
         generationConfig: {
-            // No Gemini 2.5, esta configuração é essencial para receber a imagem
+            // Este campo é essencial no Gemini 2.5/3 para saída de imagem
             responseModalities: ["IMAGE"] 
         }
     };
@@ -232,8 +232,13 @@ async function callGeminiAPI(prompt, imageBase64, mimeType) {
         body: JSON.stringify(payload)
     });
 
-    const result = await response.json();
-    return result;
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        // Se o modelo 2.5 não estiver disponível na sua região, o erro aparecerá aqui
+        throw new Error(errorData.error?.message || `Erro no servidor: ${response.status}`);
+    }
+
+    return await response.json();
 }
 
     // UI Helper Functions
