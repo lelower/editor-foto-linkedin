@@ -1,9 +1,10 @@
 export default async function handler(req, res) {
   const apiKey = process.env.GOOGLE_API_KEY;
-  // Use exatamente este modelo para geração de imagem
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
 
   try {
+    // Usando a versão estável do 2.5 Flash
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -11,8 +12,13 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-    return res.status(response.status).json(data);
+    
+    if (!response.ok) {
+        return res.status(response.status).json(data);
+    }
+
+    return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({ error: 'Erro interno no backend' });
+    return res.status(500).json({ error: 'Erro no servidor 2026' });
   }
 }
