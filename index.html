@@ -220,9 +220,9 @@ async function callGeminiAPI(prompt, imageBase64, mimeType) {
                 { inlineData: { mimeType: mimeType, data: imageBase64 } }
             ]
         }],
-        // Gemini 2.0 responde com imagem
         generationConfig: {
-            response_modalities: ["IMAGE"] 
+            // No Gemini 2.5, esta configuração é essencial para receber a imagem
+            responseModalities: ["IMAGE"] 
         }
     };
 
@@ -232,12 +232,8 @@ async function callGeminiAPI(prompt, imageBase64, mimeType) {
         body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || "Erro na geração");
-    }
-
-    return await response.json();
+    const result = await response.json();
+    return result;
 }
 
     // UI Helper Functions
