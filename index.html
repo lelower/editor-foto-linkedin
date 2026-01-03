@@ -167,42 +167,50 @@
         reader.readAsDataURL(file);
     }
 
-    async function generateProfessionalPhoto() {
-        if (!currentBase64) return;
+async function generateProfessionalPhoto() {
+    if (!currentBase64) return;
 
-        setLoading(true);
-        hideError();
+    setLoading(true);
+    hideError();
 
-        const prompt = "Improve this photo for a professional LinkedIn profile headshot. Enhance lighting to be soft and flattering studio lighting. Ensure the background is a blurred, neutral professional office or gradient. Make the subject look approachable and confident. Keep the person's identity but polish the image quality to be high resolution and sharp.";
+    const prompt = "Maintain the person's facial features exactly as they are. Improve this photo for a professional LinkedIn headshot. Enhance lighting to studio quality, soft and flattering. Change the background to a blurred, neutral professional office. High resolution, 4k, professional photography.";
 
-        try {
-            const result = await callGeminiAPI(prompt, currentBase64, currentMimeType);
+    try {
+        const result = await callGeminiAPI(prompt, currentBase64, currentMimeType);
+        
+        // LOG para debug: veja o que chegou da Vercel no seu console (F12)
+        console.log("Resposta da IA:", result);
+
+        // O Gemini 2.0 Flash Experimental costuma devolver neste formato:
+        if (result.candidates && result.candidates[0].content.parts) {
+            const parts = result.candidates[0].content.parts;
             
-            const candidates = result.candidates;
-            if (candidates && candidates.length > 0) {
-                const parts = candidates[0].content.parts;
-                const imagePart = parts.find(p => p.inlineData);
+            // Procuramos por qualquer parte que contenha 'inlineData' ou 'inline_data'
+            const imagePart = parts.find(p => p.inlineData || p.inline_data);
+            
+            if (imagePart) {
+                const imageData = imagePart.inlineData || imagePart.inline_data;
+                const newImageBase64 = imageData.data;
+                const mimeType = imageData.mimeType || 'image/png';
                 
-                if (imagePart && imagePart.inlineData) {
-                    const newImageBase64 = imagePart.inlineData.data;
-                    const mimeType = imagePart.inlineData.mimeType || 'image/png';
-                    
-                    resultImage.src = `data:${mimeType};base64,${newImageBase64}`;
-                    showResult();
-                } else {
-                    throw new Error("A IA não gerou uma imagem. Tente novamente.");
-                }
+                resultImage.src = `data:${mimeType};base64,${newImageBase64}`;
+                showResult();
             } else {
-                throw new Error("Resposta inválida da IA.");
+                // Se a IA não gerou imagem, ela pode ter devolvido um texto explicando o porquê
+                const textMsg = parts.find(p => p.text)?.text || "A IA não devolveu uma imagem.";
+                throw new Error(textMsg);
             }
-
-        } catch (error) {
-            console.error("Erro:", error);
-            showError(error.message || "Falha ao gerar a imagem. Por favor tente novamente.");
-        } finally {
-            setLoading(false);
+        } else {
+            throw new Error("Formato de resposta desconhecido. Verifique o console.");
         }
+
+    } catch (error) {
+        console.error("Erro completo:", error);
+        showError("Erro: " + error.message);
+    } finally {
+        setLoading(false);
     }
+}
 
 async function callGeminiAPI(prompt, imageBase64, mimeType) {
     const payload = {
